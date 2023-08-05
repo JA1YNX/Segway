@@ -1,17 +1,16 @@
 #define M5STACK_MPU6886 
 #include <M5Stack.h>
-#include <SoftwareSerial.h>
-/*#include "BluetoothSerial.h"
+#include "BluetoothSerial.h"
 
 BluetoothSerial SerialBT;
 
 String MACadd = "C4:5B:BE:33:BE:6A";
 uint8_t address[6] ={0xC4,0x5B,0xBE,0x33,0xBE,0x6A};
-bool connected;*/
+bool connected;
 
 //PID係数
 #define TARGET            90.0f
-#define KP                0.5f
+#define KP                0.05f
 #define KI                0.0f
 #define KD                0.0f
 
@@ -39,12 +38,11 @@ float pitch0, roll0, yaw0;
 void setup() {
   M5.begin();
   M5.Lcd.begin();
+  M5.Lcd.setTextColor(GREEN);
+  M5.Lcd.setTextSize(1);
 
-  //pinMode(rxPin, INPUT);
-  //pinMode(txPin, OUTPUT);
-  //mySerial.begin(115200); 
-  Serial.begin(115200); 
-  /*SerialBT.begin("ESP32test", true); 
+  Serial.begin(9600); 
+  SerialBT.begin("M5Gray", true); 
   Serial.println("The device started in master mode, make sure remote BT device is on!");
 
   connected = SerialBT.connect(address);
@@ -57,12 +55,13 @@ void setup() {
       Serial.println("Failed to connect. Make sure remote device is available and in range, then restart app."); 
     }
   }
+
   // disconnect() may take upto 10 secs max
   if (SerialBT.disconnect()) {
     Serial.println("Disconnected Succesfully!");
   }
   // this would reconnect to the name(will use address, if resolved) or address used with connect(name/address).
-  SerialBT.connect();*/
+  SerialBT.connect();
 
   M5.MPU6886.Init(); //MPU設定
   M5.MPU6886.getAhrsData(&pitch0,&roll0,&yaw0);
@@ -70,14 +69,14 @@ void setup() {
 }
 
 void loop() {
-  float pitch,roll,yaw;
-  float now,dt,Time;
+  float pitch, roll, yaw;
+  float now, dt, Time;
   uint8_t Duty;
   //ロール角取得
-  M5.MPU6886.getAhrsData(&pitch,&roll,&yaw);
+  M5.MPU6886.getAhrsData(&pitch, &roll, &yaw);
   
   //PID計算
-  now     = TARGET - roll                 ; // 目標角度から現在の角度を引いて偏差を求める
+  now       = TARGET - (roll + 90.0f)                 ; // 目標角度から現在の角度を引いて偏差を求める
   if (-20 < now && now < 20) { 
     Time    = micros()                    ;
     dt      = (Time - preTime) / 1000000  ; // 処理時間を求める
@@ -90,11 +89,13 @@ void loop() {
     if (power < -1){ power = -1;}           // →-1.0~1.0
     if (1 < power) { power =  1;}             
     
-    Duty = (int)((MOTOR_POWER_MAX - MOTOR_POWER_MIN)* abs(power) + MOTOR_POWER_MIN); 
-
-    // SerialBT.write(Duty);
-    Serial.println(Duty);
-
+    Duty = (int)((MOTOR_POWER_MAX - MOTOR_POWER_MIN) * abs(power) + MOTOR_POWER_MIN); 
+    char data[2];
+    data[0] = Duty;
+    power >= 0 ? data[1] = 0 : data[1] = 1;
+    
+    SerialBT.write(data[0]); SerialBT.write(data[1]);
+    Serial.printf("duty = %d\t",data[0]); Serial.printf("dir = &d\r\n\r\n", data[1]);
   }  
   else {  // +-20度を越えたら倒れたとみなす
     power = 0;
@@ -102,23 +103,15 @@ void loop() {
     // SerialBT.write(Duty);
     Serial.println(Duty);
   }
-  M5.Lcd.clear(BLACK);  
-  M5.Lcd.setTextColor(GREEN);
-  M5.Lcd.setTextSize(1);
-  M5.Lcd.setCursor(0, 0);
-  M5.Lcd.printf("now:%6.1f",now);
-  M5.Lcd.setCursor(150, 00);
-  M5.Lcd.printf("power:%6.1f",power  );
-  M5.Lcd.setCursor(0, 40);
-  M5.Lcd.printf("Duty:%6.1f",Duty);
-  M5.Lcd.setCursor(150,40);
-  M5.Lcd.printf("roll:%6.1f",roll);
-  M5.Lcd.setCursor(0, 120);
-  M5.Lcd.printf("P:%6.4f",P);
-  M5.Lcd.setCursor(90, 120);
-  M5.Lcd.printf("I:%6.4f",I);
-  M5.Lcd.setCursor(180, 120);
-  M5.Lcd.printf("D:%6.4f",D);
+
+  M5.Lcd.clear();
+  M5.Lcd.setCursor(0, 0);     M5.Lcd.printf("now:%6.1f",now);
+  M5.Lcd.setCursor(150, 00);  M5.Lcd.printf("power:%6.1f",power);
+  M5.Lcd.setCursor(0, 40);    M5.Lcd.printf("Duty:%d",Duty);
+  M5.Lcd.setCursor(150,40);   M5.Lcd.printf("roll:%6.1f",roll);
+  M5.Lcd.setCursor(0, 120);   M5.Lcd.printf("P:%6.4f",P);
+  M5.Lcd.setCursor(90, 120);  M5.Lcd.printf("I:%6.4f",I);
+  M5.Lcd.setCursor(180, 120); M5.Lcd.printf("D:%6.4f",D);
   /*Serial.println(roll);
   Serial.println(now);
   Serial.println(power);
