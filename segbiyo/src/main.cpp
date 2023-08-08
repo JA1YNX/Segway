@@ -4,7 +4,7 @@
 
 BluetoothSerial SerialBT;
 
-String MACadd = "C4:5B:BE:33:BE:6A";
+String MACadd = "9c:9c:1f:cb:df:12";
 uint8_t address[6] ={0xC4,0x5B,0xBE,0x33,0xBE,0x6A};
 bool connected;
 
@@ -13,12 +13,6 @@ bool connected;
 #define KP                0.05f
 #define KI                0.0f
 #define KD                0.0f
-
-//Motor
-/*#define MOTOR_PIN_F        21   // to DC Motor Driver FIN
-#define MOTOR_PIN_R        22   // to DC Motor Driver RIN
-#define MOTOR_PWM_F        0   // PWM CHANNEL
-#define MOTOR_PWM_R        1   // PWM CHANNEL*/
 
 #define MOTOR_POWER_MIN    50
 #define MOTOR_POWER_MAX    255
@@ -33,7 +27,6 @@ float pitch0, roll0, yaw0;
 #define rxPin 3
 #define txPin 1
 
-//EspSoftwareSerial::UART mySerial;
 
 void setup() {
   M5.begin();
